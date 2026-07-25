@@ -4,10 +4,8 @@ package com.user.streaming.models;
 import jakarta.persistence.*;
 import org.hibernate.annotations.AnyDiscriminatorImplicitValues;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
-
+import java.security.Permission;
+import java.util.*;
 @Entity
 @Table(name = "tb_user")
 public class User {
@@ -26,6 +24,15 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+
+    public List<String> getRoles(){
+        List<String> roles = new ArrayList<>();
+        for(Permission permission : p){
+            roles.add(permission.getDescription());
+        }
+        return roles;
+    }
+
     private Set<Role> roles = new HashSet<>();
 
     public User(){

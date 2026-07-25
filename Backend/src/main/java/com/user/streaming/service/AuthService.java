@@ -1,12 +1,19 @@
 package com.user.streaming.service;
 
 
+import com.user.streaming.Security.Jwt.JwtTokenProvider;
+import com.user.streaming.dto.AccountCredentialsDTO;
 import com.user.streaming.dto.RegisterRequestDTO;
+import com.user.streaming.dto.TokenDTO;
 import com.user.streaming.models.Role;
 import com.user.streaming.models.User;
 import com.user.streaming.repository.RoleRepository;
 import com.user.streaming.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +36,12 @@ public class AuthService {
     private UserRepository userRepository;
 
 
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+
+    @Autowired
+    private JwtTokenProvider tokenProvider;
     @Autowired
     private RoleRepository roleRepository;
 
@@ -65,5 +78,17 @@ public class AuthService {
         */
         userRepository.save(newUser);
         return "Usuário registrado com sucesso.";
+    }
+
+
+    public ResponseEntity<TokenDTO> login (AccountCredentialsDTO credentialsDTO){
+
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(credentialsDTO.getEmail(),
+                credentialsDTO.getPassword()));
+        var user = userRepository.findByEmail(credentialsDTO.getEmail());
+
+        var token = tokenProvider.createAccesToken(credentialsDTO.getUsername(),
+                user.getRoles());
+        return ResponseEntity.ok(token);
     }
 }

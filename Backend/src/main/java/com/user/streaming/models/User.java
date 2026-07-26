@@ -4,8 +4,9 @@ package com.user.streaming.models;
 import jakarta.persistence.*;
 import org.hibernate.annotations.AnyDiscriminatorImplicitValues;
 
-import java.security.Permission;
+
 import java.util.*;
+import com.udemyCourse.course.model.Permission;
 @Entity
 @Table(name = "tb_user")
 public class User {
@@ -18,20 +19,20 @@ public class User {
     private String password;
     private String refreshToken;
 
+    public List<String> getRoles(){
+        List<String> roleNames = new ArrayList<>();
+        for(Role role : this.roles){
+            roleNames.add(role.getAuthority());
+        }
+
+        return roleNames;
+    }
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "tb_user_role",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-
-    public List<String> getRoles(){
-        List<String> roles = new ArrayList<>();
-        for(Permission permission : p){
-            roles.add(permission.getDescription());
-        }
-        return roles;
-    }
 
     private Set<Role> roles = new HashSet<>();
 
@@ -67,9 +68,7 @@ public class User {
     public Long getId() {
         return id;
     }
-    public Set<Role> getRoles() {
-        return roles;
-    }
+
 
     public String getRefreshToken() {
         return refreshToken;

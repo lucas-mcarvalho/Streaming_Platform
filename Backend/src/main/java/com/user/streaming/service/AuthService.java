@@ -81,14 +81,16 @@ public class AuthService {
     }
 
 
-    public ResponseEntity<TokenDTO> login (AccountCredentialsDTO credentialsDTO){
-
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(credentialsDTO.getEmail(),
-                credentialsDTO.getPassword()));
-        var user = userRepository.findByEmail(credentialsDTO.getEmail());
-
-        var token = tokenProvider.createAccesToken(credentialsDTO.getUsername(),
-                user.getRoles());
+    public ResponseEntity<TokenDTO> login(AccountCredentialsDTO credentialsDTO) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(credentialsDTO.getEmail(), credentialsDTO.getPassword())
+        );
+        var user = userRepository.findByEmail(credentialsDTO.getEmail())
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado!"));
+        var token = tokenProvider.createAccesToken(
+                credentialsDTO.getUsername(),
+                user.getRoles()
+        );
         return ResponseEntity.ok(token);
     }
 }

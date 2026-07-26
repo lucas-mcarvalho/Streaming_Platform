@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: streaming
+  profiles:
+    active: test
+
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
@@ -18,8 +21,6 @@ spring:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
-  profiles:
-    active: test
 
   security:
     oauth2:
@@ -32,9 +33,15 @@ spring:
               - email
               - profile
 
+app:
+  storage:
+    type: local
+  reminders:
+    reading:
+      enabled: false
+
 cors:
   originPatterns: http://localhost:8080
-
 
 springdoc:
   api-docs:

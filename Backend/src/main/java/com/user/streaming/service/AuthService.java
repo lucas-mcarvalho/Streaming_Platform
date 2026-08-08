@@ -12,6 +12,7 @@ import com.user.streaming.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -87,10 +88,17 @@ public class AuthService {
         );
         var user = userRepository.findByEmail(credentialsDTO.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado!"));
+
+        if (!user.getName().equals(credentialsDTO.getUsername())) {
+            throw new BadCredentialsException("Username ou senha inválidos!");
+        }
+
         var token = tokenProvider.createAccesToken(
-                credentialsDTO.getUsername(),
+                user.getEmail(),
                 user.getRoles()
         );
+        token.setUsername(user.getName());
+        token.setEmail(user.getEmail());
         return ResponseEntity.ok(token);
     }
 }

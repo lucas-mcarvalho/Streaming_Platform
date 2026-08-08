@@ -19,8 +19,8 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: 25GB
+      max-request-size: 25GB
 
   security:
     oauth2:
@@ -36,6 +36,7 @@ spring:
 app:
   storage:
     type: local
+    location: ${STORAGE_LOCATION:./storage}
   reminders:
     reading:
       enabled: false

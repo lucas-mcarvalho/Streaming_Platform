@@ -30,12 +30,26 @@ services:
 
   backend:
     build: ./Backend/
-
+    restart: always
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      STORAGE_LOCATION: /app/storage
     ports:
       - "8080:8080"
+    volumes:
+      - media_data:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
 
+  frontend:
+    build: ./Frontend/
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
+  media_data:

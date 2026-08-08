@@ -37,13 +37,13 @@ public class AuthController {
         if(credentialsIsInvalid(accountCredentialsDTO)){
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid client Request!");
         }
-        var token = authService.login(accountCredentialsDTO);
-        if(token == null) ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid client request");
         return authService.login(accountCredentialsDTO);
     }
 
     private static boolean credentialsIsInvalid(AccountCredentialsDTO credentialsDTO) {
-        return credentialsDTO == null && StringUtils.isBlank(credentialsDTO.getPassword())
-                || StringUtils.isBlank(credentialsDTO.getUsername());
+        return credentialsDTO == null
+                || StringUtils.isBlank(credentialsDTO.getUsername())
+                || StringUtils.isBlank(credentialsDTO.getEmail())
+                || StringUtils.isBlank(credentialsDTO.getPassword());
     }
 }

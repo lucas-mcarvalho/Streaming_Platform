@@ -1,10 +1,9 @@
 package com.user.streaming.dto;
 
-import org.hibernate.boot.jaxb.hbm.internal.RepresentationModeConverter;
+import java.util.Objects;
+
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.RepresentationModel;
-
-import java.util.Objects;
 
 public class AccountCredentialsDTO extends RepresentationModel<AccountCredentialsDTO> {
 

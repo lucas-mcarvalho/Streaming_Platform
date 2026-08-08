@@ -1,7 +1,7 @@
 package com.user.streaming.service;
 
 
-import com.user.streaming.dto.MovieDTO;
+import com.user.streaming.models.Category;
 import com.user.streaming.models.Movies;
 import com.user.streaming.repository.MovieRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -24,14 +25,19 @@ public class MovieService {
     @Autowired
     private MovieRepository movieRepository;
 
+    @Autowired
+    private CategoryService categoryService;
+
     @Value("${app.storage.location:./storage}")
     private String storageLocation;
 
     public Movies save(String title,
                        MultipartFile movie,
-                       MultipartFile cover
+                       MultipartFile cover,
+                       List<Long> categoryIds
                        ){
 
+        Set<Category> categories = categoryService.findAllByIds(categoryIds);
         String videoPath = saveFile(movie, "videos");
         String coverPath = saveFile(cover, "covers");
 
@@ -40,6 +46,7 @@ public class MovieService {
         movies.setTitle(title);
         movies.setDatapath(videoPath);
         movies.setCoverUrl(coverPath);
+        movies.setCategories(categories);
 
         return movieRepository.save(movies);
     }

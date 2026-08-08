@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/movies")
@@ -24,9 +23,10 @@ public class MovieController {
     public ResponseEntity<Movies> create(
             @RequestParam String title,
             @RequestParam MultipartFile movie,
-            @RequestParam MultipartFile cover) {
+            @RequestParam MultipartFile cover,
+            @RequestParam(required = false) List<Long> categoryIds) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(movieService.save(title, movie, cover));
+                .body(movieService.save(title, movie, cover, categoryIds));
     }
 
     @GetMapping

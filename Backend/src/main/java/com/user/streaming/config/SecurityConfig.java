@@ -48,6 +48,8 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/auth/register").permitAll()
                         .requestMatchers("/movies/**").permitAll()
+                        .requestMatchers("/categories/**").permitAll()
+                        .requestMatchers("/series/**").permitAll()
                         .requestMatchers("/media/**").permitAll()
                         .anyRequest().authenticated()
                 )

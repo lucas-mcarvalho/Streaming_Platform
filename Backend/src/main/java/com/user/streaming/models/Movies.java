@@ -3,7 +3,9 @@ package com.user.streaming.models;
 
 import jakarta.persistence.*;
 
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Table(name = "tb_movies")
@@ -15,6 +17,15 @@ public class Movies {
     private String title;
     private String datapath;
     private String coverUrl;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "tb_movie_category",
+            joinColumns = @JoinColumn(name = "movie_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    @OrderBy("name ASC")
+    private Set<Category> categories = new LinkedHashSet<>();
 
 
     public Movies(){
@@ -48,6 +59,14 @@ public class Movies {
 
     public void setCoverUrl(String coverUrl) {
         this.coverUrl = coverUrl;
+    }
+
+    public Set<Category> getCategories() {
+        return categories;
+    }
+
+    public void setCategories(Set<Category> categories) {
+        this.categories = categories == null ? new LinkedHashSet<>() : categories;
     }
 
     @Override

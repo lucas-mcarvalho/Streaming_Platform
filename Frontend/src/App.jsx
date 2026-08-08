@@ -11,14 +11,38 @@ function mediaUrl(path) {
 
 function normalizeApiMovie(item, index = 0) {
   const fallback = catalog[index % catalog.length]
+  const categoryNames = Array.isArray(item.categories) ? item.categories.map((category) => category.name || category).filter(Boolean) : []
   return {
     ...fallback,
     ...item,
     id: item.id || `api-${index}-${item.title}`,
     image: mediaUrl(item.coverUrl) || fallback.image,
     datapath: mediaUrl(item.datapath),
-    categories: ['Novidades'],
+    categories: [...new Set(['Filmes', 'Novidades', ...categoryNames])],
     match: 'Novo no catálogo',
+  }
+}
+
+function normalizeApiSeries(item, index = 0) {
+  const seriesCatalog = catalog.filter((title) => title.categories?.includes('Séries'))
+  const fallback = seriesCatalog[index % seriesCatalog.length] || catalog[index % catalog.length]
+  const categoryNames = Array.isArray(item.categories) ? item.categories.map((category) => category.name || category).filter(Boolean) : []
+  const episodes = Array.isArray(item.episodes)
+    ? item.episodes.map((episode) => ({ ...episode, datapath: mediaUrl(episode.datapath) }))
+    : []
+  return {
+    ...fallback,
+    ...item,
+    id: `series-${item.id || `${index}-${item.title}`}`,
+    image: mediaUrl(item.coverUrl) || fallback.image,
+    hero: mediaUrl(item.coverUrl) || fallback.hero || fallback.image,
+    year: item.releaseYear || fallback.year,
+    genre: categoryNames.join(' • ') || 'Série',
+    categories: [...new Set(['Séries', 'Novidades', ...categoryNames])],
+    match: 'Série no catálogo',
+    duration: episodes.length ? `${episodes.length} episódio${episodes.length > 1 ? 's' : ''}` : 'Série',
+    episodes,
+    datapath: episodes[0]?.datapath || null,
   }
 }
 
@@ -44,7 +68,7 @@ function Icon({ name, size = 20, strokeWidth = 1.8 }) {
   )
 }
 
-function Header({ onAuth, onUpload, search, setSearch, user }) {
+function Header({ onAuth, onCatalog, search, setSearch, user }) {
   const [openSearch, setOpenSearch] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   return (
@@ -59,13 +83,14 @@ function Header({ onAuth, onUpload, search, setSearch, user }) {
         <a href="#catalogo">Filmes</a>
         <a href="#catalogo">Séries</a>
         <a href="#minha-lista">Minha lista</a>
+        <button className="nav-add-button" onClick={() => { onCatalog(); setMenuOpen(false) }}><Icon name="plus" size={17} /> Adicionar título</button>
       </nav>
       <div className="header-actions">
         <div className={openSearch ? 'search-box open' : 'search-box'}>
           <button className="icon-button" onClick={() => setOpenSearch(!openSearch)} aria-label="Pesquisar"><Icon name="search" /></button>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filmes e séries" aria-label="Pesquisar filmes e séries" />
         </div>
-        <button className="upload-button" onClick={onUpload}><Icon name="upload" size={18} /> <span>Enviar filme</span></button>
+        <button className="upload-button" onClick={onCatalog}><Icon name="plus" size={18} /> <span>Adicionar título</span></button>
         <button className="profile-button" onClick={onAuth} aria-label="Abrir perfil">
           <Icon name="user" size={19} />
           <span>{user?.username?.slice(0, 1).toUpperCase() || ''}</span>
@@ -155,6 +180,13 @@ function DetailModal({ movie, onClose, onPlay, inList, onToggleList }) {
           <h2>{movie.title}</h2>
           <div className="movie-meta"><strong>{movie.match}</strong><span>{movie.year}</span><span className="age">{movie.rating}</span><span>{movie.duration}</span></div>
           <p>{movie.description}</p>
+          {movie.episodes?.length > 0 && <div className="episode-list">
+            <h3>Episódios</h3>
+            {movie.episodes.map((episode) => <button key={episode.id || episode.episodeNumber} onClick={() => onPlay({ ...movie, title: `${movie.title} — ${episode.title}`, datapath: episode.datapath })}>
+              <span><Icon name="play" size={15} /></span>
+              <strong>{episode.episodeNumber}. {episode.title}</strong>
+            </button>)}
+          </div>}
           <div className="hero-actions">
             <button className="button button-primary" onClick={() => onPlay(movie)}><Icon name="play" /> Assistir</button>
             <button className="round-button" onClick={() => onToggleList(movie)}><Icon name={inList ? 'check' : 'plus'} /></button>
@@ -225,32 +257,88 @@ function AuthModal({ onClose, onSuccess, notify }) {
   )
 }
 
-function UploadModal({ onClose, onSuccess, token, notify }) {
+function CatalogModal({ onClose, onSuccess, token, notify }) {
+  const [kind, setKind] = useState('movie')
   const [title, setTitle] = useState('')
   const [movie, setMovie] = useState(null)
   const [cover, setCover] = useState(null)
+  const [episodes, setEpisodes] = useState([])
+  const [description, setDescription] = useState('')
+  const [releaseYear, setReleaseYear] = useState('')
+  const [categories, setCategories] = useState([])
+  const [categoryIds, setCategoryIds] = useState([])
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    api.listCategories()
+      .then((items) => setCategories(Array.isArray(items) ? items : []))
+      .catch(() => notify('Não foi possível carregar as categorias.', 'error'))
+  }, [])
+
+  const toggleCategory = (categoryId) => {
+    setCategoryIds((selected) => selected.includes(categoryId)
+      ? selected.filter((id) => id !== categoryId)
+      : [...selected, categoryId])
+  }
+
   const submit = async (event) => {
     event.preventDefault()
-    const data = new FormData()
-    data.append('title', title); data.append('movie', movie); data.append('cover', cover)
     setLoading(true)
     try {
-      const created = await api.uploadMovie(data, token)
-      onSuccess(created); notify('Filme enviado com sucesso.'); onClose()
+      let created
+      if (kind === 'movie') {
+        const data = new FormData()
+        data.append('title', title)
+        data.append('movie', movie)
+        data.append('cover', cover)
+        categoryIds.forEach((categoryId) => data.append('categoryIds', categoryId))
+        created = await api.uploadMovie(data, token)
+      } else {
+        const data = new FormData()
+        data.append('title', title)
+        data.append('description', description)
+        data.append('releaseYear', releaseYear)
+        data.append('cover', cover)
+        episodes.forEach((episode) => data.append('episodes', episode))
+        categoryIds.forEach((categoryId) => data.append('categoryIds', categoryId))
+        created = await api.createSeries(data, token)
+      }
+      onSuccess(created, kind)
+      notify(kind === 'movie' ? 'Filme enviado com sucesso.' : 'Série cadastrada com sucesso.')
+      onClose()
     } catch (error) { notify(error.message, 'error') } finally { setLoading(false) }
   }
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <section className="auth-modal upload-modal" onMouseDown={(event) => event.stopPropagation()}>
         <button className="modal-close" onClick={onClose}><Icon name="close" /></button>
-        <div className="upload-icon"><Icon name="upload" size={28} /></div>
-        <p className="auth-kicker">ADICIONAR AO CATÁLOGO</p><h2>Envie um novo filme</h2>
+        <div className="upload-icon"><Icon name={kind === 'movie' ? 'upload' : 'plus'} size={28} /></div>
+        <p className="auth-kicker">ADICIONAR AO CATÁLOGO</p><h2>{kind === 'movie' ? 'Envie um novo filme' : 'Cadastre uma nova série'}</h2>
+        <div className="catalog-tabs" role="tablist" aria-label="Tipo de título">
+          <button type="button" className={kind === 'movie' ? 'active' : ''} onClick={() => setKind('movie')}>Filme</button>
+          <button type="button" className={kind === 'series' ? 'active' : ''} onClick={() => setKind('series')}>Série</button>
+        </div>
         <form onSubmit={submit}>
-          <label>Título<input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome do filme" /></label>
-          <label className="file-field"><span>Arquivo de vídeo</span><input required type="file" accept="video/*" onChange={(e) => setMovie(e.target.files[0])} /><small>{movie?.name || 'MP4, WebM ou MOV — até 5 GB'}</small></label>
-          <label className="file-field"><span>Imagem de capa</span><input required type="file" accept="image/*" onChange={(e) => setCover(e.target.files[0])} /><small>{cover?.name || 'JPG, PNG ou WebP'}</small></label>
-          <button className="button button-primary full-button" disabled={loading}>{loading ? 'Enviando...' : 'Enviar filme'} <Icon name="upload" /></button>
+          <label>Título<input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={kind === 'movie' ? 'Nome do filme' : 'Nome da série'} /></label>
+          {kind === 'movie' ? <>
+            <label className="file-field"><span>Arquivo de vídeo</span><input required type="file" accept="video/*" onChange={(e) => setMovie(e.target.files[0])} /><small>{movie?.name || 'MP4, WebM ou MOV'}</small></label>
+            <label className="file-field"><span>Imagem de capa</span><input required type="file" accept="image/*" onChange={(e) => setCover(e.target.files[0])} /><small>{cover?.name || 'JPG, PNG ou WebP'}</small></label>
+          </> : <>
+            <label>Descrição<textarea required rows="4" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Sinopse da série" /></label>
+            <label>Ano de lançamento<input required type="number" min="1888" max={new Date().getFullYear() + 5} value={releaseYear} onChange={(e) => setReleaseYear(e.target.value)} placeholder="2017" /></label>
+            <label className="file-field"><span>Imagem de capa</span><input required type="file" accept="image/*" onChange={(e) => setCover(e.target.files[0])} /><small>{cover?.name || 'JPG, PNG ou WebP'}</small></label>
+            <label className="file-field"><span>Arquivos dos episódios</span><input required multiple type="file" accept="video/*" onChange={(e) => setEpisodes(Array.from(e.target.files || []))} /><small>{episodes.length ? `${episodes.length} episódio${episodes.length > 1 ? 's' : ''} selecionado${episodes.length > 1 ? 's' : ''}` : 'Selecione os vídeos na ordem dos episódios'}</small></label>
+          </>}
+          <fieldset className="category-fieldset">
+            <legend>Categorias</legend>
+            {categories.length ? <div className="category-options">
+              {categories.map((category) => <label className="category-option" key={category.id}>
+                <input type="checkbox" checked={categoryIds.includes(category.id)} onChange={() => toggleCategory(category.id)} />
+                <span>{category.name}</span>
+              </label>)}
+            </div> : <small>Nenhuma categoria cadastrada. Você pode salvar o título sem categoria.</small>}
+          </fieldset>
+          <button className="button button-primary full-button" disabled={loading}>{loading ? 'Salvando...' : kind === 'movie' ? 'Enviar filme' : 'Cadastrar série'} <Icon name={kind === 'movie' ? 'upload' : 'plus'} /></button>
         </form>
       </section>
     </div>
@@ -267,7 +355,7 @@ export default function App() {
   const [details, setDetails] = useState(null)
   const [playing, setPlaying] = useState(null)
   const [authOpen, setAuthOpen] = useState(false)
-  const [uploadOpen, setUploadOpen] = useState(false)
+  const [catalogOpen, setCatalogOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem('cineflix_user')) } catch { return null } })
   const [list, setList] = useState(() => { try { return JSON.parse(localStorage.getItem('cineflix_list')) || [] } catch { return [] } })
@@ -276,11 +364,11 @@ export default function App() {
     setToast({ message, type }); window.setTimeout(() => setToast(null), 3600)
   }
   useEffect(() => {
-    api.listMovies().then((items) => {
-      if (!Array.isArray(items) || !items.length) return
-      const mapped = items.map(normalizeApiMovie)
-      setMovies([...mapped, ...catalog])
-    }).catch(() => {})
+    Promise.allSettled([api.listMovies(), api.listSeries()]).then(([movieResult, seriesResult]) => {
+      const apiMovies = movieResult.status === 'fulfilled' && Array.isArray(movieResult.value) ? movieResult.value.map(normalizeApiMovie) : []
+      const apiSeries = seriesResult.status === 'fulfilled' && Array.isArray(seriesResult.value) ? seriesResult.value.map(normalizeApiSeries) : []
+      if (apiMovies.length || apiSeries.length) setMovies([...apiSeries, ...apiMovies, ...catalog])
+    })
   }, [])
   const toggleList = (movie) => {
     const next = list.includes(movie.id) ? list.filter((id) => id !== movie.id) : [...list, movie.id]
@@ -291,11 +379,11 @@ export default function App() {
     const term = search.trim().toLocaleLowerCase('pt-BR')
     return term ? movies.filter((movie) => `${movie.title} ${movie.genre}`.toLocaleLowerCase('pt-BR').includes(term)) : []
   }, [search, movies])
-  const openUpload = () => user ? setUploadOpen(true) : (setAuthOpen(true), notify('Entre na sua conta para enviar um filme.', 'info'))
+  const openCatalog = () => user ? setCatalogOpen(true) : (setAuthOpen(true), notify('Entre na sua conta para adicionar títulos.', 'info'))
 
   return (
     <div className="app-shell">
-      <Header onAuth={() => setAuthOpen(true)} onUpload={openUpload} search={search} setSearch={setSearch} user={user} />
+      <Header onAuth={() => setAuthOpen(true)} onCatalog={openCatalog} search={search} setSearch={setSearch} user={user} />
       {search ? (
         <main className="search-results"><div className="section-heading"><div><p className="eyebrow"><span /> RESULTADOS</p><h1>{results.length ? `Encontramos ${results.length} título${results.length > 1 ? 's' : ''}` : 'Nenhum título encontrado'}</h1><p>Resultados para “{search}”</p></div></div><div className="card-grid">{results.map((movie) => <MovieCard key={movie.id} movie={movie} onPlay={setPlaying} onDetails={setDetails} inList={list.includes(movie.id)} onToggleList={toggleList} />)}</div></main>
       ) : <>
@@ -309,7 +397,7 @@ export default function App() {
       <DetailModal movie={details} onClose={() => setDetails(null)} onPlay={(movie) => { setDetails(null); setPlaying(movie) }} inList={details && list.includes(details.id)} onToggleList={toggleList} />
       <PlayerModal movie={playing} onClose={() => setPlaying(null)} />
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onSuccess={setUser} notify={notify} />}
-      {uploadOpen && <UploadModal onClose={() => setUploadOpen(false)} onSuccess={(movie) => setMovies([normalizeApiMovie(movie), ...movies])} token={user?.token} notify={notify} />}
+      {catalogOpen && <CatalogModal onClose={() => setCatalogOpen(false)} onSuccess={(title, kind) => setMovies((current) => [kind === 'series' ? normalizeApiSeries(title) : normalizeApiMovie(title), ...current])} token={user?.token} notify={notify} />}
       {toast && <div className={`toast ${toast.type}`}><span><Icon name={toast.type === 'error' ? 'close' : 'check'} size={17} /></span>{toast.message}</div>}
     </div>
   )

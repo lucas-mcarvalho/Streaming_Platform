@@ -39,7 +39,7 @@ public class AuthController {
         }
         var token = authService.login(accountCredentialsDTO);
         if(token == null) ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid client request");
-        return ResponseEntity.ok().body(token);
+        return authService.login(accountCredentialsDTO);
     }
 
     private static boolean credentialsIsInvalid(AccountCredentialsDTO credentialsDTO) {

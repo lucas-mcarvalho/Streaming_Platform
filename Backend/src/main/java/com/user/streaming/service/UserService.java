@@ -28,7 +28,7 @@ public class UserService {
         user.setPassword(dto.getPassword());
 
         Role userRole = roleRepository.findByAuthority("ROLE_USER");
-        user.getRoles().add(userRole);
+        user.getRoles().add(String.valueOf(userRole));
         return userRepository.save(user);
     }
 

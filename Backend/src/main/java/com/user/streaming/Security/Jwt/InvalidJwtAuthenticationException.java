@@ -1,4 +1,4 @@
-package com.udemyCourse.course.exceptions;
+package com.user.streaming.Security.Jwt;
 
 
 import org.springframework.http.HttpStatus;

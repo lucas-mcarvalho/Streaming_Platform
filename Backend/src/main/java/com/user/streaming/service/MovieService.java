@@ -31,7 +31,7 @@ public class MovieService {
     @Value("${app.storage.location:./storage}")
     private String storageLocation;
 
-    public Movies save(String title,
+    public Movies save(String title,String description,
                        MultipartFile movie,
                        MultipartFile cover,
                        List<Long> categoryIds
@@ -44,6 +44,7 @@ public class MovieService {
         Movies movies = new Movies();
 
         movies.setTitle(title);
+        movies.setDescription(description);
         movies.setDatapath(videoPath);
         movies.setCoverUrl(coverPath);
         movies.setCategories(categories);

@@ -15,6 +15,7 @@ public class Movies {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String title;
+    private String description;
     private String datapath;
     private String coverUrl;
 
@@ -61,6 +62,14 @@ public class Movies {
         this.coverUrl = coverUrl;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     public Set<Category> getCategories() {
         return categories;
     }
@@ -73,11 +82,11 @@ public class Movies {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Movies movies = (Movies) o;
-        return Objects.equals(id, movies.id) && Objects.equals(title, movies.title) && Objects.equals(datapath, movies.datapath) && Objects.equals(coverUrl, movies.coverUrl);
+        return Objects.equals(id, movies.id) && Objects.equals(title, movies.title) && Objects.equals(description, movies.description) && Objects.equals(datapath, movies.datapath) && Objects.equals(coverUrl, movies.coverUrl) && Objects.equals(categories, movies.categories);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, title, datapath, coverUrl);
+        return Objects.hash(id, title, description, datapath, coverUrl, categories);
     }
 }

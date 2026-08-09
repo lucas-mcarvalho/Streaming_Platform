@@ -89,10 +89,10 @@ public class AuthService {
         var user = userRepository.findByEmail(credentialsDTO.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado!"));
 
-        if (!user.getName().equals(credentialsDTO.getUsername())) {
+       /* if (!user.getName().equals(credentialsDTO.getUsername())) {
             throw new BadCredentialsException("Username ou senha inválidos!");
         }
-
+    */
         var token = tokenProvider.createAccesToken(
                 user.getEmail(),
                 user.getRoles()

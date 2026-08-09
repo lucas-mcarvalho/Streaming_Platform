@@ -42,7 +42,6 @@ public class AuthController {
 
     private static boolean credentialsIsInvalid(AccountCredentialsDTO credentialsDTO) {
         return credentialsDTO == null
-                || StringUtils.isBlank(credentialsDTO.getUsername())
                 || StringUtils.isBlank(credentialsDTO.getEmail())
                 || StringUtils.isBlank(credentialsDTO.getPassword());
     }

@@ -22,11 +22,12 @@ public class MovieController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Movies> create(
             @RequestParam String title,
+            @RequestParam String description,
             @RequestParam MultipartFile movie,
             @RequestParam MultipartFile cover,
             @RequestParam(required = false) List<Long> categoryIds) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(movieService.save(title, movie, cover, categoryIds));
+                .body(movieService.save(title,description, movie, cover, categoryIds));
     }
 
     @GetMapping
